@@ -14,7 +14,6 @@ void DMPSWAnalysis(){
   gSystem->Load("$DMPSWSYS/lib/libDmpEvent.so");
   gSystem->Load("$DMPSWWORK/lib/libDmpEvtSim.so");
   gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
-  gSystem
 }
 
 namespace DMPSWAna{

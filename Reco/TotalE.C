@@ -4,13 +4,13 @@ namespace Reco{
     TChain *eventTree = new TChain("Event/Cal");
     eventTree->AddFile(file.c_str());
     DmpEvtBgoHits *evts = new DmpEvtBgoHits();
-    eventTree->SETBranchAddress("Hits",&evts);
-    long nEvt = eventTree->GETEntries();
+    eventTree->SetBranchAddress("Hits",&evts);
+    long nEvt = eventTree->GetEntries();
     TH1D *ES0 = new TH1D("E_side0","E_side0",MaxEnergy_MeV/10,0,MaxEnergy_MeV);
     TH1D *ES1 = new TH1D("E_side1","E_side1",MaxEnergy_MeV/10,0,MaxEnergy_MeV);
     TH1D *ET = new TH1D("E_T","E_T",MaxEnergy_MeV/10,0,MaxEnergy_MeV);
-    for(long iEvt=0;i<nEvt;++iEvt){
-      eventTree->GETEntry(iEvt);
+    for(long iEvt=0;iEvt<nEvt;++iEvt){
+      eventTree->GetEntry(iEvt);
       short nBar = evts->fEnergy.size();
       double sumS0=0,sumS1=0,sumT=0;
       for(size_t i=0;i<nBar;++i){
