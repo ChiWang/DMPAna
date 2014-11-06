@@ -11,4 +11,5 @@ void DMPSWAnalysis(){
 #include "evtHeader_time.C"
 #include "trig_System.C"
 #include "trig_InternalTypeRate.C"
+#include "spectrum_e.C"
 

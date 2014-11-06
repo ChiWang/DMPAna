@@ -28,29 +28,34 @@ DmpAnalysisManager::~DmpAnalysisManager(){
 }
 
 //-------------------------------------------------------------------
-void DmpAnalysisManager::LoadInputFile(const std::string &f)const{
-  gRootIOSvc->Set("Input/FileName",f);
+void DmpAnalysisManager::LoadInputFile(const std::string &f){
+  gRootIOSvc->InputFile(f);
+  for(std::map<std::string, TChain*>::iterator it=fChainSet.begin();it!=fChainSet.end();++it){
+    delete it->second;
+  }
+  fChainSet.clear();
 }
 
 //-------------------------------------------------------------------
 #include <boost/lexical_cast.hpp>
 void DmpAnalysisManager::SetTimeCut(const std::string &start,const std::string &stop){
-  gCore->Set("StartTime",start);
+  gCore->StartTime(start);
   std::string t0="EventHeader.fSecond > "+boost::lexical_cast<std::string>(DmpTimeConvertor::Date2Second(start));
   fTimeCut0 = t0.c_str();
 
-  gCore->Set("StopTime",stop);
+  gCore->StopTime(stop);
   std::string t1="EventHeader.fSecond < "+boost::lexical_cast<std::string>(DmpTimeConvertor::Date2Second(stop));
   fTimeCut1 = t1.c_str();
 }
 
 //-------------------------------------------------------------------
 void DmpAnalysisManager::SetTimeCut(const int &start,const int &stop){
-  gCore->Set("StartTime",DmpTimeConvertor::Second2Date(start));
+  gCore->StartTime(DmpTimeConvertor::Second2Date(start));
+  T0 = start;
   std::string t0="EventHeader.fSecond > "+boost::lexical_cast<std::string>(start);
   fTimeCut0 = t0.c_str();
 
-  gCore->Set("StopTime",DmpTimeConvertor::Second2Date(stop));
+  gCore->StopTime(DmpTimeConvertor::Second2Date(stop));
   std::string t1="EventHeader.fSecond < "+boost::lexical_cast<std::string>(stop);
   fTimeCut1 = t1.c_str();
 }

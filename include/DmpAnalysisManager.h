@@ -25,7 +25,7 @@ public:
   ~DmpAnalysisManager();
 
 public:     // binding functions
-  void LoadInputFile(const std::string &f)const;
+  void LoadInputFile(const std::string &f);
   void SetTimeCut(const std::string &startTime_Date,const std::string &stopTime_Date="2113-01-01 00:00:00");
   void SetTimeCut(const int &startTime_Second,const int &stopTime_Second=999999999);
   TChain *GetTree(const std::string &treeName);
