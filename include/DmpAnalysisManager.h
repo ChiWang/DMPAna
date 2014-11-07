@@ -11,6 +11,7 @@
 #include <map>
 
 class TChain;
+class DmpEvtBgoHits;
 
 class DmpAnalysisManager{
 /*
@@ -32,6 +33,7 @@ public:     // binding functions
   bool  ActiveTree(const std::string &treeName);
   TCut  TimeWindowCut()const{return (fTimeCut0&&fTimeCut1);}
   int   T0;             // start second, temprary use
+  void ShowThisEvent(char *timeName,DmpEvtBgoHits *evt)const;
 
 private:
   DmpAnalysisManager();

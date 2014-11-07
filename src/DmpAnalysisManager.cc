@@ -12,6 +12,10 @@
 #include "DmpLog.h"
 #include "DmpRootIOSvc.h"
 #include "DmpCore.h"
+#include "DmpEvtBgoHits.h"
+#include "DmpBgoBase.h"
+#include "TCanvas.h"
+#include "TH2D.h"
 
 DmpAnalysisManager::DmpAnalysisManager():T0(0){
 std::cout<<"DEBUG: "<<__FILE__<<"("<<__LINE__<<")"<<gCore->GetStopTime()<<std::endl;
@@ -75,6 +79,34 @@ bool DmpAnalysisManager::ActiveTree(const std::string &treeName){
   chain->AddFile(files.c_str());
   fChainSet.insert(std::make_pair(treeName,chain));
   return true;
+}
+
+//-------------------------------------------------------------------
+void DmpAnalysisManager::ShowThisEvent(char *name,DmpEvtBgoHits *evt)const{
+  std::string xn  = (std::string)name + "-XZ";
+  TH2F *h_layer_bar_e_X = new TH2F(xn.c_str(),"layer_bar_e-XZ",22,0,22,14,0,14);
+  h_layer_bar_e_X->GetXaxis()->SetTitle("bar");
+  h_layer_bar_e_X->GetYaxis()->SetTitle("x layer");
+
+  std::string yn  = (std::string)name + "-YZ";
+  TH2F *h_layer_bar_e_Y = new TH2F(yn.c_str(),"layer_bar_e-YZ",22,0,22,14,0,14);
+  h_layer_bar_e_Y->GetXaxis()->SetTitle("bar");
+  h_layer_bar_e_Y->GetYaxis()->SetTitle("y layer");
+  short nBar = evt->fEnergy.size();
+  for(short i=0;i<nBar;++i){
+    if((DmpBgoBase::GetLayerID(evt->fGlobalBarID[i]) % 2) == 0){
+      h_layer_bar_e_Y->Fill(DmpBgoBase::GetBarID(evt->fGlobalBarID[i]),DmpBgoBase::GetLayerID(evt->fGlobalBarID[i]),evt->fEnergy[i]);
+    }else{
+      h_layer_bar_e_X->Fill(DmpBgoBase::GetBarID(evt->fGlobalBarID[i]),DmpBgoBase::GetLayerID(evt->fGlobalBarID[i]),evt->fEnergy[i]);
+    }
+  }
+
+  TCanvas *c1 = new TCanvas(name,name);
+  c1->Divide(2,1);
+  c1->cd(1);
+  h_layer_bar_e_X->Draw("colz");
+  c1->cd(2);
+  h_layer_bar_e_Y->Draw("colz");
 }
 
 //-------------------------------------------------------------------

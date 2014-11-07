@@ -6,10 +6,9 @@
 
 namespace Trigger{
 void trig_InternalTypeRate(vector<double> input){
-        //input[0] = FiredBar_mean, input[1] = FiredBar_sigma
-        //input[2] = Energy_mean, input[3] = Energy_sigma
-  if(input.size() != 4){
-    cout<<"ERROR: input.size() != 4"<<endl;
+        //input[0] = Energy_mean, input[1] = Energy_sigma
+  if(input.size() != 2){
+    cout<<"ERROR: input.size() != 2"<<endl;
     return;
   }
   float n_sigma=3;
@@ -39,14 +38,13 @@ void trig_InternalTypeRate(vector<double> input){
   for(long ievt=0;ievt<results[6];++ievt){
     HitsTree->GetEntry(ievt);
     short nBar = bgoHits->fEnergy.size();
-    if(nBar>input[0]+n_sigma*input[1] || nBar<input[0]-n_sigma*input[1]){
-      continue;
-    }
     double totE  =0;
     for(short ib=0;ib<nBar;++ib){
       totE += bgoHits->fEnergy[ib];
+      if(DmpBgoBase::GetLayerID(bgoHits->fGlobalBarID[ib])>7){
+      }
     }
-    if(totE > input[2]+n_sigma*input[3] || totE < input[2]-n_sigma*input[3]){
+    if(totE > input[0]+n_sigma*input[1]){
       //std::cout<<"mean-3*sigma < total < mean+3*sigma: time: "<<header->GetSecond()<<std::endl;
       continue;
     }
