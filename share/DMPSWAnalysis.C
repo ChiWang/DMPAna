@@ -6,10 +6,13 @@
 
 void DMPSWAnalysis(){
   gSystem->Load("$DMPSWWORK/lib/libDmpAnalysis.so");
+  gSystem->Load("$DMPSWWORK/lib/libDmpEvtSim.so");
+  gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
 }
 
 #include "evtHeader_time.C"
 #include "trig_System.C"
 #include "trig_InternalTypeRate.C"
 #include "spectrum_e.C"
+#include "MaxEnergyBar.C"
 

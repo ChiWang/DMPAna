@@ -10,9 +10,9 @@
 */
 
 namespace Trigger{
-void Status(){
-  gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
-  TChain *RdcTree = gAnaMgr->GetTree("Event/Rdc");
+void Status(char *treeName="Event/Cal"){
+  //gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
+  TChain *RdcTree = gAnaMgr->GetTree(treeName);
   char name[50];
   snprintf(name,50,"Trigger0~4: Time-%d to %d",gCore->GetStartTime(),gCore->GetStopTime());
   TCanvas *c1 = new TCanvas(name,name);
