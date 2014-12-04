@@ -35,6 +35,8 @@ Dictionary_*
 # vim .swp; emacs
 *.swp
 *~
+*.ps
+*.sps
 
 # created executable files
 OrbitSimulation/src/GLAST_slew_estimate

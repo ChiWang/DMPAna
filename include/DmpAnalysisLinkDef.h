@@ -11,7 +11,7 @@
 #pragma link off all functions;
 #pragma link off all namespaces;
 
-#pragma link C++ class DmpAnalysisManager;
-#pragma link C++ global gAnaMgr;
+#pragma link C++ class DmpAnalysisCombine;
+#pragma link C++ global gAnaCombine;
 
 #endif

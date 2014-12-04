@@ -7,7 +7,7 @@
 
 import os
 
-target='DmpAnalysis'
+target='DmpAnalysisCombine'
 
 print "---> compiling: %s\n" % target
 #--------------------------------------------------------------------
