@@ -22,6 +22,7 @@
 #include "include/Event.hh"
 #include <iostream>
 #include <vector>
+#include <map>
 //#include <fstream>
 
 
@@ -43,6 +44,24 @@ enum Location{
   PS = 0,
   SPS = 1,
 };
+
+namespace EnableCut{
+  bool TotSN_Cut = true;
+  bool Length_Cut = false;
+  bool Cut_2 = false;
+  bool Cut_3 = false;
+  bool Cut_4 = false;
+  bool Cut_5 = false;
+  bool Cut_6 = false;
+};
+
+  void SetCutStatus(int st){
+// *
+// *  TODO:  how to set cut as gSytle->SetOptxx(011011011)?
+// *
+    int defaultCut=1000000;  // order: refer to namespace EnableCut, from up to down
+    st += 0;
+  }
 
   TString Path = "./Data/";
   TString treeName ="t4";
@@ -80,9 +99,9 @@ enum Location{
   float     Offset[NLadder][2] = {
           {0.0,             0.},     // ladder 0 as reference. CoG of verticle track
           {-4.502*Pitch[0], -9.778*Pitch[1]},    // others are offset
-          {-54.05*Pitch[0], -82.7 *Pitch[1]},
-          {-52.17*Pitch[0], -80.39*Pitch[1]},
-          {-46.15*Pitch[0], -40.33*Pitch[1]}};
+          {(-54.05+4)*Pitch[0], -82.7 *Pitch[1]},   // TODO, offset
+          {(-52.17+4)*Pitch[0], -80.39*Pitch[1]},
+          {(-46.15+4)*Pitch[0], -40.33*Pitch[1]}};
   float  Position_Z[2][NLadder]={  // update it while load input
           {0,10,20,30,40},        // PS
           {0,10,20,30,40}};     // SPS.     unit cm. beam --->
@@ -166,19 +185,43 @@ short LadderInOrder(int ladderID){
 }
 
 //-------------------------------------------------------------------
-void ClusterNumberInLadder(int r[NLadder][2]){
+bool GoodClusterCheck(Cluster *aC){
+  if(Conf::EnableCut::TotSN_Cut){
+    if(aC->GetTotSN()< 3.8 || aC->GetTotSN()>14.0){
+      return false;
+    }
+  }
+  if(Conf::EnableCut::Length_Cut){
+// *
+// *  TODO:  check cut value
+// *
+    if(aC->GetLength()< 1 || aC->GetTotSN()>10){
+      return false;
+    }
+  }
+  return true;
+}
+
+//-------------------------------------------------------------------
+void ClusterNumberInLadder(vector<int> &r, bool choosingGoodCluster=false){
+  r.resize(NLadder*2,0);
   int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
   for(short ic=0;ic<n_cls;++ic){
     Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
-    ++r[LadderInOrder(aCluster->ladder)][aCluster->side];
+    if(choosingGoodCluster){
+      if(! GoodClusterCheck(aCluster)){
+        continue;
+      }
+    }
+    ++r[LadderInOrder(aCluster->ladder)*2 + aCluster->side];
   }
 }
 
 //-------------------------------------------------------------------
 bool SingleGoodClusterInLadder0(){
-  int clusBN[NLadder][2]={0,0,0,0,0,0,0,0,0,0};
+  vector<int> clusBN;
   ClusterNumberInLadder(clusBN);
-  if(clusBN[0][0] !=1 || clusBN[0][1] != 1){
+  if(clusBN[0] !=1 || clusBN[1] != 1){
     return false;
   }
   return true;
@@ -186,10 +229,10 @@ bool SingleGoodClusterInLadder0(){
 
 //-------------------------------------------------------------------
 bool ClusterNumberLessThan2_forAllS_Side(){
-  int clusBN[NLadder][2]={0,0,0,0,0,0,0,0,0,0};
+  vector<int> clusBN;
   ClusterNumberInLadder(clusBN);
   for(short id=1;id<NLadder;++id){
-    if(clusBN[id][0]>1){
+    if(clusBN[id*2+0]>1){
       return false;
     }
   }
@@ -328,34 +371,34 @@ void CombineThem(TString f0="run_1416155587_ANC_387.root",TString f1="run_141615
 //-------------------------------------------------------------------
 namespace Performance{ // without any cuts
   void Clusters(){
-    TH1F *h_clsSeed[NLadder][2] = {0};  // cluster seed
-    TH1F *h_clsNB[NLadder][2] = {0};  // cluster numbers
-    TH2F *h_COG_SNR[NLadder][2] = {0};  // COG, center of geometry. GetCoG(). SNR: signal inoise ratio of cluster. GetTotSN()
-    TH2F *h_COG_Length[NLadder][2] = {0};  // length of this cluster: GetLength()
+    vector<TH1F*>   h_clsSeed(NLadder*2);  // cluster seed
+    vector<TH1F*>   h_clsNB(NLadder*2);  // cluster numbers
+    vector<TH2F*>   h_COG_SNR(NLadder*2);  // COG, center of geometry. GetCoG(). SNR: signal inoise ratio of cluster. GetTotSN()
+    vector<TH2F*>   h_COG_Length(NLadder*2);  // length of this cluster: GetLength()
     for(short i =0;i<NLadder; ++i){
       for(short j =0;j<2;++j){
-        h_clsSeed[i][j] = new TH1F(Form("L%d_S%d--cluster seed",i,j),Form("L%d_S%d cluster seed",i,j),1024,0,1024);
-        h_clsSeed[i][j]->SetLabelSize(0.12);
-        h_clsNB[i][j] = new TH1F(Form("L%d_S%d--cluster number",i,j),Form("L%d_S%d cluster number",i,j),8,0,8);
-        h_clsNB[i][j]->SetLabelSize(0.12);
+        h_clsSeed[i*2+j] = new TH1F(Form("L%d_S%d--cluster seed",i,j),Form("L%d_S%d cluster seed",i,j),1024,0,1024);
+        h_clsSeed[i*2+j]->SetLabelSize(0.12);
+        h_clsNB[i*2+j] = new TH1F(Form("L%d_S%d--cluster number",i,j),Form("L%d_S%d cluster number",i,j),8,0,8);
+        h_clsNB[i*2+j]->SetLabelSize(0.12);
         //h_clsNB[i][j]->GetYaxis()->SetTitleSize(1.5);
-        h_COG_SNR[i][j] = new TH2F(Form("L%d_S%d--COG VS SNR",i,j),Form("L%d_S%d CoG VS SNR",i,j),1024*2,j*640,640+j*384,300,0,60);
-        h_COG_SNR[i][j]->SetLabelSize(0.12);
-        h_COG_SNR[i][j]->SetLabelSize(0.08,"Y");
-        h_COG_Length[i][j]=new TH2F(Form("L%d_S%d--COG VS Length",i,j),Form("L%d_S%d CoG VS Length",i,j),1024*2,j*640,640+j*384,30,0,30);
-        h_COG_Length[i][j]->SetLabelSize(0.12);
-        h_COG_Length[i][j]->SetLabelSize(0.08,"Y");
+        h_COG_SNR[i*2+j] = new TH2F(Form("L%d_S%d--COG VS SNR",i,j),Form("L%d_S%d CoG VS SNR",i,j),1024*2,j*640,640+j*384,300,0,60);
+        h_COG_SNR[i*2+j]->SetLabelSize(0.12);
+        h_COG_SNR[i*2+j]->SetLabelSize(0.08,"Y");
+        h_COG_Length[i*2+j]=new TH2F(Form("L%d_S%d--COG VS Length",i,j),Form("L%d_S%d CoG VS Length",i,j),1024*2,j*640,640+j*384,30,0,30);
+        h_COG_Length[i*2+j]->SetLabelSize(0.12);
+        h_COG_Length[i*2+j]->SetLabelSize(0.08,"Y");
       }
     }
 
     // event loop
     for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
       LoadEvent();
-      int clusBN[NLadder][2]={0,0,0,0,0,0,0,0,0,0};
+      vector<int> clusBN;
       ClusterNumberInLadder(clusBN);
       for(short id=0;id<NLadder;++id){
         for(short s=0;s<2;++s){
-          h_clsNB[id][s]->Fill(clusBN[id][s]);
+          h_clsNB[id*2+s]->Fill(clusBN[id*2+s]);
         }
       }
       int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
@@ -364,9 +407,9 @@ namespace Performance{ // without any cuts
         short order = LadderInOrder(aCluster->ladder);
         short side = aCluster->side;
         float CoG = aCluster->GetCoG();
-        h_COG_SNR[order][side]->Fill(CoG,aCluster->GetTotSN());
-        h_COG_Length[order][side]->Fill(CoG,aCluster->GetLength());
-        h_clsSeed[order][side]->Fill(aCluster->GetSeedAdd());
+        h_COG_SNR[order*2+side]->Fill(CoG,aCluster->GetTotSN());
+        h_COG_Length[order*2+side]->Fill(CoG,aCluster->GetLength());
+        h_clsSeed[order*2+side]->Fill(aCluster->GetSeedAdd());
       }
     }
 
@@ -381,16 +424,16 @@ namespace Performance{ // without any cuts
     c3->Divide(2,5,0,0);
     for(short id=0;id<NLadder;++id){
         c0->cd(id+1);
-        h_clsSeed[id][0]->Draw();
-        h_clsSeed[id][1]->Draw("same");
+        h_clsSeed[id*2+0]->Draw();
+        h_clsSeed[id*2+1]->Draw("same");
       for(short s=0;s<2;++s){
         c1->cd(id*2+s+1);
-        h_clsNB[id][s]->Draw();
+        h_clsNB[id*2+s]->Draw();
         c2->cd(id*2+s+1);
-        h_COG_SNR[id][s]->Draw("colz");
+        h_COG_SNR[id*2+s]->Draw("colz");
         //h_COG_SNR[id][s]->ProfileX()->Draw("same");
         c3->cd(id*2+s+1);
-        h_COG_Length[id][s]->Draw("colz");
+        h_COG_Length[id*2+s]->Draw("colz");
       }
     }
   }
@@ -482,18 +525,18 @@ namespace Tracking{
     *   and return the dx of all clusters
     */
 
-    static long couts = -1;     ++couts;
+    gStyle->SetOptStat(00000000);
+    gStyle->SetOptFit(000000000);
+
     dx.clear();
-    TH2F *track_xz = new TH2F(Form("Event%08d track_xz",couts),Form("Event%08d track_xz",couts),(Conf::ExHall*600+400),-10,Conf::ExHall*650+400,10000,0,10);
-    track_xz->SetMarkerSize(5);
     int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
     // linear fitting parameter
     vector<float>   xPosi;
     vector<float>   zPosi;
+    vector<float>   totSig;
     for(short ic=0;ic<n_cls;++ic){
       Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
-      short side = aCluster->side;
-      if(side != 0){
+      if(aCluster->side != 0){
         continue;
       }
       if(aCluster->GetTotSN()< 3.8 || aCluster->GetTotSN()>14.0){
@@ -501,20 +544,33 @@ namespace Tracking{
       }
       xPosi.push_back(GetPosition(aCluster));
       zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(aCluster->ladder)]);
-      track_xz->Fill(zPosi[ic],xPosi[ic],aCluster->GetTotSig());
+      totSig.push_back(aCluster->GetTotSig());
     }
-    cout<<"\nevent "<< couts<<endl;
-    for(short ic =0;ic<n_cls;++ic){
-      cout<<xPosi[ic]<<"/"<<zPosi[ic]<<"\t";
+    if(zPosi.size() < 3){
+      return;
     }
-    cout<<endl;
-    track_xz->Fit(Conf::linearFit,"0QF");
-    //if(couts%10 ==0){
-      TCanvas *cc = new TCanvas(Form("AMS Track x-z event %08d",couts),Form("AMS Track x-z Event %08d",couts));
-      cc->cd();
-      track_xz->Draw();
-      Conf::linearFit->DrawCopy("lsame");
-    //}
+    static TCanvas *cc = new TCanvas("AMS Track","AMS Track");
+    static long couts=-1; ++couts;
+    TH2F *track[2] = {
+            new TH2F(Form("Event%08d track_xz",Conf::evtID),Form("Event%08d track_xz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10), new TH2F(Form("Event%08d track_yz",Conf::evtID),Form("Event%08d track_yz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10)};
+    if(couts == 0){
+      cc->Divide(2,1);
+      track[0]->SetTitle("Track X-Z");  track[0]->SetXTitle("Z / cm"); track[0]->SetYTitle("X / cm");
+      track[1]->SetTitle("Track Y-Z");  track[1]->SetXTitle("Z / cm"); track[1]->SetYTitle("Y / cm");
+    }
+    //cout<<"\nevent "<< Conf::evtID<<endl;
+    for(short ic =0;ic<zPosi.size();++ic){
+      //cout<<xPosi[ic]<<"/"<<zPosi[ic]<<"\t";
+      track[0]->Fill(zPosi[ic],xPosi[ic],totSig[ic]);
+    }
+    //cout<<endl;
+      cc->cd(1);
+      track[0]->Fit(Conf::linearFit,"0Q");//QF
+    if(couts%100 ==0){
+      track[0]->SetMarkerSize(8);
+      track[0]->Draw("same");
+      Conf::linearFit->DrawCopy("same");
+    }
 
     /*
     for(short ic=0;ic<n_cls;++ic){
@@ -529,15 +585,23 @@ namespace Tracking{
     */
   }
 
-  void Plots(){
+  void FitXZ(vector<Cluster*> &xClus,double p0,double p1){   // input all x Clusters(s side), get fit parameter
+    vector<float>   xPosi;
+    vector<float>   zPosi;
+    //Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
+  }
+
+  void Plots(long maxevt=999999999){
     // DX VS s-side strips
-    for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
+    for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
       LoadEvent();
       // one track event
+      if(! SingleGoodClusterInLadder0()){   // both sides
+        continue;
+      }
       if(! ClusterNumberLessThan2_forAllS_Side()){
         continue;
       }
-      if(Conf::evtID>10) return;
       vector<float> dx;
       Get_dx(dx);
     }
