@@ -94,18 +94,12 @@ namespace EnableCut{
 // *
 // *  TODO:   offset for PS and SPS
 // *
-  float     Offset_CoG[NLadder][2] = {
-          {322.8,   815.7},     // ladder 0 as reference. CoG of verticle track
-          {-4.502,  -9.778},    // others are offset
-          {-54.05,  -82.7},
-          {-52.17,  -80.39},
-          {-46.15,  -40.33}};
   float     Offset[NLadder][2] = {
           {0.0,             0.},     // ladder 0 as reference. CoG of verticle track
-          {-4.502*Pitch[0], -9.778*Pitch[1]},    // others are offset
-          {(-54.05+4)*Pitch[0], -82.7 *Pitch[1]},   // TODO, offset
-          {(-52.17+4)*Pitch[0], -80.39*Pitch[1]},
-          {(-46.15+4)*Pitch[0], -40.33*Pitch[1]}};
+          {-0.04936, -0.1965},    // others are offset
+          {-0.5868, -1.72 },   // TODO, offset
+          {-0.5671, -1.673},
+          {-0.4975, -0.9338}};
   float  Position_Z[2][NLadder]={  // update it while load input
           {0,10,20,30,40},        // PS
           {0,10,20,30,40}};     // SPS.     unit cm. beam --->
@@ -116,7 +110,7 @@ namespace EnableCut{
   void LoadAlignmentParameter(TString aFile){
     cout<<"loading new alignment parameter. from file: "<<aFile<<endl;
     //ifstream input();
-    // TODO: update Offset_CoG[][] and Offset[][];
+    // TODO: update automatically
   }
 
   void LoadInput(TString fName){
