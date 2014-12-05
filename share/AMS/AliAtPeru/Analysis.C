@@ -207,7 +207,7 @@ bool GoodClusterCheck(Cluster *aC){
 }
 
 //-------------------------------------------------------------------
-void ClusterNumberInLadder(vector<int> &r, bool choosingGoodCluster=false){
+void ClusterNumberInLadder(vector<int> &r, bool choosingGoodCluster=true){
   r.resize(NLadder*2,0);
   int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
   for(short ic=0;ic<n_cls;++ic){
@@ -222,10 +222,11 @@ void ClusterNumberInLadder(vector<int> &r, bool choosingGoodCluster=false){
 }
 
 //-------------------------------------------------------------------
-bool SingleGoodClusterInLadder0(){
+bool N_ClustersInLadder_I(int N, short I, bool OnlyGoodCluster=true){
+  // both sides has n clusters
   vector<int> clusBN;
-  ClusterNumberInLadder(clusBN);
-  if(clusBN[0] !=1 || clusBN[1] != 1){
+  ClusterNumberInLadder(clusBN,OnlyGoodCluster);
+  if(clusBN[I*2+0] !=N || clusBN[I*2+1] != N){
     return false;
   }
   return true;
@@ -476,7 +477,7 @@ namespace Alignment{
     for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
       LoadEvent();
       // one track event
-      if(! SingleGoodClusterInLadder0()){   // both sides
+      if(! N_ClustersInLadder_I(1,0)){   // both sides
         continue;
       }
       if(! ClusterNumberLessThan2_forAllS_Side()){
@@ -681,7 +682,7 @@ namespace Tracking{
     for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
       LoadEvent();
       // one track event
-      if(! SingleGoodClusterInLadder0()){   // both sides
+      if(! N_ClustersInLadder_I(1,0)){
         continue;
       }
       if(! ClusterNumberLessThan2_forAllS_Side()){
