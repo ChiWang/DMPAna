@@ -1,8 +1,5 @@
 /*
- *   root -l
- *   gSystem->Load("$DMPSWWORK/lib/libDmpEvent.so");
- *   gSystem->CompileMacro("Analysis.C");
- *   LoadInputFile("fileName","SPS");
+ * refer to Readme.md
  *
  * // unit for length: cm 
  * // strip 0,0 as reference.
