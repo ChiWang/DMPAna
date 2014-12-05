@@ -34,13 +34,6 @@ using namespace std;
   //  printf("%s\n", gSystem->GetMakeSharedLib());
   */
 
-// forward declaration
-namespace Tracking{
-  void Initi();
-};
-// end of forward declaration
-
-
 //-------------------------------------------------------------------
 namespace Conf{
 
@@ -146,7 +139,6 @@ namespace EnableCut{
          }
       }
     }
-    Tracking::Initi();
   }
 
 };
@@ -710,6 +702,7 @@ namespace Tracking{
 
 //-------------------------------------------------------------------
   void Plots(long maxevt=999999999){
+     Initi();
     // DX VS s-side strips
     TH1F *h_p1[NLadder][2] = {0};  // linear fit parameter 1. 0: s-side, 1: k-side
     
@@ -751,6 +744,5 @@ namespace Tracking{
 
 
 };
-
 
 

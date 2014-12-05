@@ -19,8 +19,9 @@ enum FileType{
 };
 
 //-------------------------------------------------------------------
-void test(short type,long nEvt = 200,TString InFN="NO"){
-  TString f = InFN;
+void Load(short type, TString InFN="NO")
+{
+  TString f = "NO";
   switch (type){
     case electron:
       f = "./Data/Root_Data/Combine_run_1416070809_ANC_366.root";
@@ -32,9 +33,14 @@ void test(short type,long nEvt = 200,TString InFN="NO"){
       f = "./Data/Root_Data/Combine_run_1416276173_ANC_451.root";
       break;
   }
-  //Tracking::Plots(nEvt);
   Conf::LoadInput(f);
+}
+
+//-------------------------------------------------------------------
+void test()
+{
   Performance::Clusters();
   Alignment::SingleStrack_S_Side();
+  //Tracking::Plots(nEvt);
 }
 
