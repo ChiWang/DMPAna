@@ -87,7 +87,7 @@ namespace EnableCut{
   float     Distance[2][4] = {{119.5,   112,    45,     95},        // PS
                               {113.3,   761.1,  39.0,   96.5}};     // SPS.     unit cm. beam --->
   float     Pitch[2] = {0.011,0.0208};    // unit cm. first is s side, then k side
-  float     kGap = 0.1392;      // 676*2 + 40 (um);  40: sensor distance,  676: active area to edge of sensor
+  float     kGap = 0.1392 + 0;      // unit cm.     1392 = 676*2 + 40 (um);  40: sensor distance,  676: active area to edge of sensor
   short     SensorNumber[NLadder] = {4,4,4,12,12};  // same for PS and SPS. from upstream to downstream
 
   // alignment parameter
@@ -246,15 +246,23 @@ bool ClusterNumberLessThan2_forAllS_Side(){
 }
 
 //-------------------------------------------------------------------
-float GetPosition(Cluster *aCluster){
+float GetPosition(Cluster *aCluster, bool includeOffset=true){
         /*
-         *  if side = 1, just give the nearest postion to (0,0)
+         *  include offset defautly,
+         *
+         *  but for alignment, must set the flag false
          *
          */
+  float posi=0.0;
   short side = aCluster->side;
   float CoG = aCluster->GetCoG();
-  float v = (side==1?CoG-640:CoG)*Conf::Pitch[side];
-  return v+(Conf::Offset[LadderInOrder(aCluster->ladder)][side]);
+  if(side == 0){    // s-side
+    posi = CoG * Conf::Pitch[side];
+  }else{    // k-side
+    CoG = CoG-640;
+    posi = CoG*Conf::Pitch[side] + (CoG<192?0:Conf::kGap);
+  }
+  return posi + (includeOffset ? Conf::Offset[LadderInOrder(aCluster->ladder)][side] : 0);
 }
 
 //-------------------------------------------------------------------
@@ -452,12 +460,14 @@ namespace Performance{ // without any cuts
         h_SNR->SetTitle(Form("L%d_S%d Cluster SNR",id,s));
         h_SNR->SetLabelSize(0.12);
         h_SNR->SetLabelSize(0.08,"Y");
+        gPad->SetLogy();
         h_SNR->Draw();
         c5->cd(id*2+s+1);
         TH1D *h_Length = h_COG_Length[id*2+s]->ProjectionY();
         h_Length->SetTitle(Form("L%d_S%d Cluster Length",id,s));
         h_Length->SetLabelSize(0.12);
         h_Length->SetLabelSize(0.08,"Y");
+        gPad->SetLogy();
         h_Length->Draw();
       }
     }
@@ -478,18 +488,14 @@ namespace Alignment{
     gStyle->SetOptStat(1111);
     gStyle->SetOptFit(100111);
 
-    TH1F *h_align_CoG[NLadder][2] = {0};  // cluster numbers
-    for(short j =0;j<2;++j){
-      h_align_CoG[0][j] = new TH1F(Form("L0_S%d--CoG",j),Form("L0_S%d CoG",j),1024*2,j*640,640+j*384);
-      h_align_CoG[0][j]->SetLabelSize(0.12);
-      h_align_CoG[0][j]->SetLabelSize(0.08,"Y");
-    }
+    TH1F *h_align_CoG[NLadder][3] = {0};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
+    h_align_CoG[0][0] = new TH1F("L0_S0 Reference Position","L0_S0 Reference Position",1500,0,10);
+    h_align_CoG[0][1] = new TH1F("L0_S1_0 Reference Position","L0_S1 Reference Position",1500,0,10);
+    h_align_CoG[0][2] = new TH1F("L0_S1_1 Reference Position","L0_S1 Reference Position",1500,0,10);
     for(short i =1;i<NLadder; ++i){
-      for(short j =0;j<2;++j){
-        h_align_CoG[i][j] = new TH1F(Form("L%d_S%d--Alignment",i,j),Form("L%d_S%d Alignment",i,j),200*6,-200,200);
-        h_align_CoG[i][j]->SetLabelSize(0.12);
-        h_align_CoG[i][j]->SetLabelSize(0.08,"Y");
-      }
+      h_align_CoG[i][0] = new TH1F(Form("L%d_S0 Offset",i),Form("L%d_S0 Offset",i),1000,-2.5,1.5);
+      h_align_CoG[i][1] = new TH1F(Form("L%d_S1_0 Offset",i),Form("L%d_S0 Offset",i),1000,-2.5,1.5);
+      h_align_CoG[i][2] = new TH1F(Form("L%d_S1_1 Offset",i),Form("L%d_S0 Offset",i),1000,-2.5,1.5);
     }
 
     for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
@@ -502,7 +508,8 @@ namespace Alignment{
         continue;
       }
       // update reference
-      float CoG_Ref_ladder0[2]={0.0,0.};    // ladder 0, side 0, 1
+      float Posi_Ref_ladder0[2]={0.0,0.};   // ladder 0, side 0, 1
+      short k_Ref_SensorID = 0;       // for k-side, short(long) ladder has 2(6) group, one group contains 2 silicon sensors. While alignmenting, we'd use vertical tracks (means, clusters of ladder 1~4 must in the same sensor(0 or 1) as the cluster which belongs to ladder 0)
       int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
       for(short ic=0;ic<n_cls;++ic){
         Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
@@ -511,8 +518,11 @@ namespace Alignment{
           continue;
         }
         short side = aCluster->side;
-        CoG_Ref_ladder0[side] = aCluster->GetCoG();;
-        h_align_CoG[0][side]->Fill(CoG_Ref_ladder0[side]);
+        Posi_Ref_ladder0[side] = GetPosition(aCluster,false);
+        if(side == 1 && aCluster->GetSeedAdd()>(640+192)){  // 640: number of s-side readout strips(one sensor), 192: number of k-side readout strips (one sensor)
+          k_Ref_SensorID = 1;
+        }
+        h_align_CoG[0][side+(side ==1 ? k_Ref_SensorID : 0)]->Fill(Posi_Ref_ladder0[side]);
       }
       // alignment
       for(short ic=0;ic<n_cls;++ic){
@@ -522,22 +532,62 @@ namespace Alignment{
           continue;
         }
         short side = aCluster->side;
-        h_align_CoG[order][side]->Fill(aCluster->GetCoG()-CoG_Ref_ladder0[side]);
+        if(side == 1){
+         short k_SensorID = (aCluster->GetSeedAdd()<(640+192)) ? 0 : 1;
+          if(k_SensorID == k_Ref_SensorID){
+            h_align_CoG[order][side + k_SensorID]->Fill(GetPosition(aCluster,false)-Posi_Ref_ladder0[side]);
+          }
+        }else{
+          h_align_CoG[order][side]->Fill(GetPosition(aCluster,false)-Posi_Ref_ladder0[side]);
+        }
+      }
+    }
+
+    TCanvas *c0 = new TCanvas(Conf::File+"  Alignment Ref.",Conf::File+"  Alignment Ref.");
+    c0->Divide(1,2);
+    h_align_CoG[0][0]->SetXTitle("X / cm");
+    h_align_CoG[0][1]->SetXTitle("Y / cm");
+    for(short s=0;s<2;++s){
+      c0->cd(s+1);
+      gPad->SetLogy();
+      h_align_CoG[0][s]->SetLabelSize(0.06);
+      h_align_CoG[0][s]->SetLabelSize(0.04,"Y");
+      h_align_CoG[0][s]->SetTitleSize(0.05,"X");
+      h_align_CoG[0][s]->Draw();
+      float mean = h_align_CoG[0][s]->GetMean(), rms = h_align_CoG[0][s]->GetRMS();
+      Conf::gausFit->SetRange(mean-rms,mean+rms);
+      h_align_CoG[0][s]->Fit(Conf::gausFit,"R0Q");
+      Conf::gausFit->DrawCopy("lsame");
+      if(s ==1){
+        h_align_CoG[0][2]->SetLineColor(3);
+        h_align_CoG[0][2]->Draw("same");
       }
     }
 
     TCanvas *c1 = new TCanvas(Conf::File+"  Alignment",Conf::File+"  Alignment");
-    c1->Divide(2,5,0.002,0.002);
-    for(short id=0;id<NLadder;++id){
+    c1->Divide(2,4,0.,0.0);
+    for(short id=1;id<NLadder;++id){
       for(short s=0;s<2;++s){
-        c1->cd(id*2+s+1);
+        c1->cd((id-1)*2+s+1);
+        gPad->SetLogy();
+        if(s==0){
+          h_align_CoG[id][s]->SetXTitle("X / cm");
+        }else{
+          h_align_CoG[id][s]->SetXTitle("Y / cm");
+        }
+        h_align_CoG[id][s]->SetLabelSize(0.12);
+        h_align_CoG[id][s]->SetLabelSize(0.08,"Y");
+        h_align_CoG[id][s]->SetTitleSize(0.04,"X");
         h_align_CoG[id][s]->Draw();
         float mean = h_align_CoG[id][s]->GetMean(), rms = h_align_CoG[id][s]->GetRMS();
-        Conf::gausFit->SetRange(mean-2*rms,mean+2*rms);
+        Conf::gausFit->SetRange(mean-rms,mean+rms);
         h_align_CoG[id][s]->Fit(Conf::gausFit,"R0Q");
         Conf::gausFit->DrawCopy("lsame");
         //output<<
       }
+      c1->cd((id-1)*2+2);
+      h_align_CoG[id][2]->SetLineColor(3);
+      h_align_CoG[id][2]->Draw("same");
     }
     if(reload) Conf::LoadAlignmentParameter(outFilename); 
   }
