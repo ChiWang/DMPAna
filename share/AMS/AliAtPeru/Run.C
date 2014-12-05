@@ -12,24 +12,29 @@ void Run(){
 }
 
 //-------------------------------------------------------------------
-void testProton(long nEvt = 200){
-  Conf::LoadInput("./Data/Root_Data/Combine_run_1416338929_ANC_476.root");
-  Performance::Clusters();
-  Tracking::Plots(nEvt);
-  Alignment::SingleStrack_S_Side();
-}
+enum FileType{
+  electron = 0,
+  muon = 1,
+  photon = 2,
+};
 
-void testElectron(long nEvt=200){
-  Conf::LoadInput("./Data/Root_Data/Combine_run_1416070809_ANC_366.root");
+//-------------------------------------------------------------------
+void test(short type,long nEvt = 200,TString InFN="NO"){
+  TString f = InFN;
+  switch (type){
+    case electron:
+      f = "./Data/Root_Data/Combine_run_1416070809_ANC_366.root";
+      break;
+    case muon:
+      f = "./Data/Root_Data/Combine_run_1416338929_ANC_476.root";
+      break;
+    case photon:
+      f = "./Data/Root_Data/Combine_run_1416276173_ANC_451.root";
+      break;
+  }
+  Conf::LoadInput(f);
   Performance::Clusters();
-  Tracking::Plots(nEvt);
   Alignment::SingleStrack_S_Side();
-}
-
-void testPhoton(long nEvt = 200){
-  Conf::LoadInput("./Data/Root_Data/Combine_run_1416276173_ANC_451.root");
-  Performance::Clusters();
   Tracking::Plots(nEvt);
-  Alignment::SingleStrack_S_Side();
 }
 
