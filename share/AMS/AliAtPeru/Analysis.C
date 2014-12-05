@@ -11,6 +11,7 @@
 #include "TSystem.h"
 #include "TStyle.h"
 #include "TH1F.h"
+#include "TH1D.h"
 #include "TProfile.h"
 #include "TH2F.h"
 #include "TF1.h"
@@ -385,6 +386,7 @@ namespace Performance{ // without any cuts
         h_clsSeed[i*2+j] = new TH1F(Form("L%d_S%d--cluster seed",i,j),Form("L%d_S%d cluster seed",i,j),1024,0,1024);
         h_clsSeed[i*2+j]->SetLabelSize(0.12);
         h_clsSeed[i*2+j]->SetLabelSize(0.08,"Y");
+        h_clsSeed[i*2+j]->SetLineColor(j+3);
         h_clsNB[i*2+j] = new TH1F(Form("L%d_S%d--cluster number",i,j),Form("L%d_S%d cluster number",i,j),8,0,8);
         h_clsNB[i*2+j]->SetLabelSize(0.12);
         h_clsNB[i*2+j]->SetLabelSize(0.08,"Y");
@@ -429,6 +431,10 @@ namespace Performance{ // without any cuts
     c2->Divide(2,5,0,0);
     TCanvas *c3 = new TCanvas(Conf::File+"  Cluster CoG_Length",Conf::File+"  Cluster CoG_Length");
     c3->Divide(2,5,0,0);
+    TCanvas *c4 = new TCanvas(Conf::File+"  Cluster SNR",Conf::File+"  Cluster SNR");
+    c4->Divide(2,5,0,0);
+    TCanvas *c5 = new TCanvas(Conf::File+"  Cluster Length",Conf::File+"  Cluster Length");
+    c5->Divide(2,5,0,0);
     for(short id=0;id<NLadder;++id){
         c0->cd(id+1);
         h_clsSeed[id*2+0]->Draw();
@@ -441,6 +447,18 @@ namespace Performance{ // without any cuts
         //h_COG_SNR[id][s]->ProfileX()->Draw("same");
         c3->cd(id*2+s+1);
         h_COG_Length[id*2+s]->Draw("colz");
+        c4->cd(id*2+s+1);
+        TH1D *h_SNR = h_COG_SNR[id*2+s]->ProjectionY();
+        h_SNR->SetTitle(Form("L%d_S%d Cluster SNR",id,s));
+        h_SNR->SetLabelSize(0.12);
+        h_SNR->SetLabelSize(0.08,"Y");
+        h_SNR->Draw();
+        c5->cd(id*2+s+1);
+        TH1D *h_Length = h_COG_Length[id*2+s]->ProjectionY();
+        h_Length->SetTitle(Form("L%d_S%d Cluster Length",id,s));
+        h_Length->SetLabelSize(0.12);
+        h_Length->SetLabelSize(0.08,"Y");
+        h_Length->Draw();
       }
     }
   }
