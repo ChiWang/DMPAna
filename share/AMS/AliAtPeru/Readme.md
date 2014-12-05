@@ -11,13 +11,9 @@
     1.  ln -s $DMPSWWORK/include ./
 
 
-1.  Generate lib
-root -l  Generate.C
-
-before ".q" from root, save the generated lib. Then, you don't need to generate it every time
-
-2.  run examples (after step 1)
-test()
+1.  run examples (after step 1)
+root -l  Run.C
+testProton()
 
 3.  Combine two sides file into one root (only for SPS)
 root -l Run.C

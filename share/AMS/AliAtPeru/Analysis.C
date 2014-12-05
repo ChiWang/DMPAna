@@ -652,7 +652,7 @@ namespace Tracking{
 
 //-------------------------------------------------------------------
   void Initi(){
-    c_track = new TCanvas("AMS Track","AMS Track");
+    c_track = new TCanvas("AMS Track",Conf::File+"__AMS Track");
     c_track->Divide(2,1);
   }
 
