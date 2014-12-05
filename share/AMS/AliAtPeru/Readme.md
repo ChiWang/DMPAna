@@ -13,7 +13,7 @@
 
 1.  run examples (after step 1)
 root -l  Run.C
-testProton()
+test(muon)
 
 3.  Combine two sides file into one root (only for SPS)
 root -l Run.C

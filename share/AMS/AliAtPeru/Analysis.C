@@ -492,6 +492,13 @@ namespace Alignment{
       h_align_CoG[i][2] = new TH1F(Form("L%d_S1_1 Offset",i),Form("L%d_S0 Offset",i),1000,-2.5,1.5);
     }
 
+    TH2F *h_offset_SeedAdd[NLadder][3] = {0};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
+    for(short i =0;i<NLadder-1; ++i){
+      h_offset_SeedAdd[i][0] = new TH2F(Form("L%d_S0 Offset_SeedAdd",i+1),  Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
+      h_offset_SeedAdd[i][1] = new TH2F(Form("L%d_S1_0 Offset_SeedAdd",i+1),Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
+      h_offset_SeedAdd[i][2] = new TH2F(Form("L%d_S1_1 Offset_SeedAdd",i+1),Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
+    }
+
     for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
       LoadEvent();
       // one track event
@@ -526,13 +533,16 @@ namespace Alignment{
           continue;
         }
         short side = aCluster->side;
+        float offV = GetPosition(aCluster,false) - Posi_Ref_ladder0[side];
         if(side == 1){
-         short k_SensorID = (aCluster->GetSeedAdd()<(640+192)) ? 0 : 1;
+          short k_SensorID = (aCluster->GetSeedAdd()<(640+192)) ? 0 : 1;
           if(k_SensorID == k_Ref_SensorID){
-            h_align_CoG[order][side + k_SensorID]->Fill(GetPosition(aCluster,false)-Posi_Ref_ladder0[side]);
+            h_align_CoG[order][side + k_SensorID]->Fill(offV);
+            h_offset_SeedAdd[order-1][side+k_SensorID]->Fill(aCluster->GetSeedAdd(),offV);
           }
         }else{
-          h_align_CoG[order][side]->Fill(GetPosition(aCluster,false)-Posi_Ref_ladder0[side]);
+          h_align_CoG[order][side]->Fill(offV);
+          h_offset_SeedAdd[order-1][side]->Fill(aCluster->GetSeedAdd(),offV);
         }
       }
     }
@@ -583,70 +593,30 @@ namespace Alignment{
       h_align_CoG[id][2]->SetLineColor(3);
       h_align_CoG[id][2]->Draw("same");
     }
+    TCanvas *c2 = new TCanvas(Conf::File+"  Offset_SeedAdd",Conf::File+"  Offset_SeedAdd");
+    c2->Divide(2,4,0.,0.0);
+    for(short id=0;id<NLadder-1;++id){
+      for(short s=0;s<2;++s){
+        c2->cd(id*2+s+1);
+        gStyle->SetOptStat(11111111);
+        gStyle->SetOptFit(111111111);
+        h_offset_SeedAdd[id][s]->SetXTitle("Seed ID");
+        h_offset_SeedAdd[id][s]->SetYTitle("Offset / cm");
+        h_offset_SeedAdd[id][s]->SetLabelSize(0.12);
+        h_offset_SeedAdd[id][s]->SetLabelSize(0.08,"Y");
+        h_offset_SeedAdd[id][s]->SetTitleSize(0.04,"X");
+        h_offset_SeedAdd[id][s]->Draw("colz");
+        //output<<
+      }
+      c2->cd(id*2+2);
+      h_offset_SeedAdd[id][2]->Draw("same");
+    }
     if(reload) Conf::LoadAlignmentParameter(outFilename); 
   }
 }
 
 //-------------------------------------------------------------------
 namespace Tracking{
-        /*
-  void Get_dx(vector<float> &dx){ // s side strips give x position
-    // *   use all clusters to fit a track, weighted by total signal of this cluster
-    // *
-    // *   and return the dx of all clusters
-    // *
-
-    gStyle->SetOptStat(00000000);
-    gStyle->SetOptFit(000000000);
-
-    dx.clear();
-    int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
-    // linear fitting parameter
-    vector<float>   xPosi;
-    vector<float>   zPosi;
-    vector<float>   totSig;
-    //int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
-    for(short ic=0;ic<n_cls;++ic){
-      Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
-      if(aCluster->side != 0){
-        continue;
-      }
-      if(aCluster->GetTotSN()< 3.8 || aCluster->GetTotSN()>14.0){
-        continue;
-      }
-      xPosi.push_back(GetPosition(aCluster));
-      zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(aCluster->ladder)]);
-      totSig.push_back(aCluster->GetTotSig());
-    }
-    if(zPosi.size() < 3){
-      return;
-    }
-    static TCanvas *cc = new TCanvas("AMS Track","AMS Track");
-    static long couts=-1; ++couts;
-    TH2F *track[2] = {
-            new TH2F(Form("Event%08d track_xz",Conf::evtID),Form("Event%08d track_xz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10), new TH2F(Form("Event%08d track_yz",Conf::evtID),Form("Event%08d track_yz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10)};
-    if(couts == 0){
-      cc->Divide(2,1);
-      track[0]->SetTitle("Track X-Z");  track[0]->SetXTitle("Z / cm"); track[0]->SetYTitle("X / cm");
-      track[1]->SetTitle("Track Y-Z");  track[1]->SetXTitle("Z / cm"); track[1]->SetYTitle("Y / cm");
-    }
-    //cout<<"\nevent "<< Conf::evtID<<endl;
-    for(short ic =0;ic<zPosi.size();++ic){
-      //cout<<xPosi[ic]<<"/"<<zPosi[ic]<<"\t";
-      track[0]->Fill(zPosi[ic],xPosi[ic],totSig[ic]);
-    }
-    //cout<<endl;
-      cc->cd(1);
-      track[0]->Fit(Conf::linearFit,"0Q");//QF
-    if(couts%100 ==0){
-      track[0]->SetMarkerSize(8);
-      track[0]->Draw("same");
-      Conf::linearFit->DrawCopy("same");
-    }
-
-  }
-  */
-
   TCanvas *c_track = 0;
   long trackID = 0;
 
@@ -741,6 +711,8 @@ namespace Tracking{
 //-------------------------------------------------------------------
   void Plots(long maxevt=999999999){
     // DX VS s-side strips
+    TH1F *h_p1[NLadder][2] = {0};  // linear fit parameter 1. 0: s-side, 1: k-side
+    
     for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
       LoadEvent();
       // one track event
