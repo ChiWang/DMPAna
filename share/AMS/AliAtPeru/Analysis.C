@@ -36,6 +36,12 @@ using namespace std;
   //  printf("%s\n", gSystem->GetMakeSharedLib());
   */
 
+// forward declaration
+namespace Tracking{
+  void Initi();
+};
+// end of forward declaration
+
 
 //-------------------------------------------------------------------
 namespace Conf{
@@ -148,6 +154,7 @@ namespace EnableCut{
          }
       }
     }
+    Tracking::Initi();
   }
 
 };
@@ -379,10 +386,12 @@ namespace Performance{ // without any cuts
       for(short j =0;j<2;++j){
         h_clsSeed[i*2+j] = new TH1F(Form("L%d_S%d--cluster seed",i,j),Form("L%d_S%d cluster seed",i,j),1024,0,1024);
         h_clsSeed[i*2+j]->SetLabelSize(0.12);
+        h_clsSeed[i*2+j]->SetLabelSize(0.08,"Y");
         h_clsNB[i*2+j] = new TH1F(Form("L%d_S%d--cluster number",i,j),Form("L%d_S%d cluster number",i,j),8,0,8);
         h_clsNB[i*2+j]->SetLabelSize(0.12);
+        h_clsNB[i*2+j]->SetLabelSize(0.08,"Y");
         //h_clsNB[i][j]->GetYaxis()->SetTitleSize(1.5);
-        h_COG_SNR[i*2+j] = new TH2F(Form("L%d_S%d--COG VS SNR",i,j),Form("L%d_S%d CoG VS SNR",i,j),1024*2,j*640,640+j*384,300,0,60);
+        h_COG_SNR[i*2+j] = new TH2F(Form("L%d_S%d--COG VS SNR",i,j),Form("L%d_S%d CoG VS SNR",i,j),1024*2,j*640,640+j*384,200,0,40);
         h_COG_SNR[i*2+j]->SetLabelSize(0.12);
         h_COG_SNR[i*2+j]->SetLabelSize(0.08,"Y");
         h_COG_Length[i*2+j]=new TH2F(Form("L%d_S%d--COG VS Length",i,j),Form("L%d_S%d CoG VS Length",i,j),1024*2,j*640,640+j*384,30,0,30);
@@ -457,11 +466,13 @@ namespace Alignment{
     for(short j =0;j<2;++j){
       h_align_CoG[0][j] = new TH1F(Form("L0_S%d--CoG",j),Form("L0_S%d CoG",j),1024*2,j*640,640+j*384);
       h_align_CoG[0][j]->SetLabelSize(0.12);
+      h_align_CoG[0][j]->SetLabelSize(0.08,"Y");
     }
     for(short i =1;i<NLadder; ++i){
       for(short j =0;j<2;++j){
         h_align_CoG[i][j] = new TH1F(Form("L%d_S%d--Alignment",i,j),Form("L%d_S%d Alignment",i,j),200*6,-200,200);
         h_align_CoG[i][j]->SetLabelSize(0.12);
+        h_align_CoG[i][j]->SetLabelSize(0.08,"Y");
       }
     }
 
@@ -518,12 +529,12 @@ namespace Alignment{
 
 //-------------------------------------------------------------------
 namespace Tracking{
+        /*
   void Get_dx(vector<float> &dx){ // s side strips give x position
-   /*
-    *   use all clusters to fit a track, weighted by total signal of this cluster
-    *
-    *   and return the dx of all clusters
-    */
+    // *   use all clusters to fit a track, weighted by total signal of this cluster
+    // *
+    // *   and return the dx of all clusters
+    // *
 
     gStyle->SetOptStat(00000000);
     gStyle->SetOptFit(000000000);
@@ -534,6 +545,7 @@ namespace Tracking{
     vector<float>   xPosi;
     vector<float>   zPosi;
     vector<float>   totSig;
+    //int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
     for(short ic=0;ic<n_cls;++ic){
       Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
       if(aCluster->side != 0){
@@ -572,25 +584,101 @@ namespace Tracking{
       Conf::linearFit->DrawCopy("same");
     }
 
-    /*
-    for(short ic=0;ic<n_cls;++ic){
-      Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
-      short side = aCluster->side;
-      if(side != 0){
-        continue;
-      }
-      float posi = GetPosition(aCluster);
-      ++r[LadderInOrder(aCluster->ladder)][aCluster->side];
+  }
+  */
+
+  TCanvas *c_track = 0;
+  long trackID = 0;
+
+//-------------------------------------------------------------------
+  void Initi(){
+    c_track = new TCanvas("AMS Track","AMS Track");
+    c_track->Divide(2,1);
+  }
+
+//-------------------------------------------------------------------
+  void FitTrack_XZ(vector<Cluster*> &xClus,double &p0, double &p1, vector<float> &xPosi,vector<float> &zPosi){
+    gStyle->SetOptStat(00000000);
+    gStyle->SetOptFit(000000000);
+  //void FitTrack_XZ(vector<Cluster*> &xClus,double &p0, double &p1, vector<float> &xPosi,vector<float> &zPosi, vector<float> &totSig = vector<float>(0)){
+       /*
+        * input is all x Clusters(s side),
+        *
+        *  output are:
+        *   linear fit parameter
+        *   and, clusters' position and tot Sig,
+        *
+        */
+    vector<float> totSig;
+    p0 = -999; p1 = -999;
+    xPosi.clear();
+    zPosi.clear();
+    totSig.clear();
+    TH2F *track_xz = new TH2F(Form("Event%08d track_xz",Conf::evtID),Form("Event%08d track_xz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10);
+    if(trackID == 0){
+      track_xz->SetTitle("Track X-Z");
+      track_xz->SetXTitle("Z / cm");
+      track_xz->SetYTitle("X / cm");
     }
-    */
+    track_xz->SetMarkerSize(4);
+    for(short i=0;i<xClus.size();++i){
+      xPosi.push_back(GetPosition(xClus[i]));
+      zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(xClus[i]->ladder)]);
+      totSig.push_back(xClus[i]->GetTotSig());
+      track_xz->Fill(zPosi[i],xPosi[i],totSig[i]);
+    }
+    track_xz->Fit(Conf::linearFit,"0Q");//QF
+    if(trackID%100 ==0){
+      c_track->cd(1);
+      track_xz->Draw("same");
+      Conf::linearFit->DrawCopy("same");
+    }
+    p0 = Conf::linearFit->GetParameter(0);
+    p1 = Conf::linearFit->GetParameter(1);
   }
 
-  void FitXZ(vector<Cluster*> &xClus,double p0,double p1){   // input all x Clusters(s side), get fit parameter
-    vector<float>   xPosi;
-    vector<float>   zPosi;
-    //Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
+//-------------------------------------------------------------------
+  void FitTrack_YZ(vector<Cluster*> &yClus,double &p0, double &p1, vector<float> &yPosi,vector<float> &zPosi){
+    gStyle->SetOptStat(00000000);
+    gStyle->SetOptFit(000000000);
+  //void FitTrack_YZ(vector<Cluster*> &yClus,double &p0, double &p1, vector<float> &yPosi,vector<float> &zPosi, vector<float> &totSig = vector<float>(0)){
+       /*
+        * input is all y Clusters(k side),
+        *
+        *  output are:
+        *   linear fit parameter
+        *   and, clusters' position and tot Sig,
+        *
+        */
+    vector<float> totSig;
+    p0 = -999; p1 = -999;
+    yPosi.clear();
+    zPosi.clear();
+    totSig.clear();
+    TH2F *track_yz = new TH2F(Form("Event%08d track_yz",Conf::evtID),Form("Event%08d track_yz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,50);
+    if(trackID == 0){
+      track_yz->SetTitle("Track Y-Z");
+      track_yz->SetXTitle("Z / cm");
+      track_yz->SetYTitle("Y / cm");
+    }
+    track_yz->SetMarkerSize(4);
+    for(short i=0;i<yClus.size();++i){
+      yPosi.push_back(GetPosition(yClus[i])); // back GetPos
+      zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(yClus[i]->ladder)]);
+      totSig.push_back(yClus[i]->GetTotSig());
+      track_yz->Fill(zPosi[i],yPosi[i],totSig[i]);
+    }
+    track_yz->Fit(Conf::linearFit,"0Q");//QF
+    if(trackID%100 ==0){
+      c_track->cd(2);
+      track_yz->Draw("same");
+      Conf::linearFit->DrawCopy("same");
+    }
+    p0 = Conf::linearFit->GetParameter(0);
+    p1 = Conf::linearFit->GetParameter(1);
   }
 
+//-------------------------------------------------------------------
   void Plots(long maxevt=999999999){
     // DX VS s-side strips
     for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
@@ -602,8 +690,29 @@ namespace Tracking{
       if(! ClusterNumberLessThan2_forAllS_Side()){
         continue;
       }
-      vector<float> dx;
-      Get_dx(dx);
+
+      vector<Cluster*>  goodClusters[2];    // s-side , k-side
+      int n_cls = Conf::AMS_Evt->Cls->GetEntriesFast();
+      for(short ic=0;ic<n_cls;++ic){
+        Cluster *aCluster = Conf::AMS_Evt->GetCluster(ic);
+        if( ! GoodClusterCheck(aCluster)){
+          continue;
+        }
+        goodClusters[aCluster->side].push_back(aCluster);
+      }
+      if(goodClusters[0].size() <2 || goodClusters[1].size()<2){
+        continue;
+      }
+
+      vector<float>  xz_Pos[2];    // (0,1): (x,z)
+      double xz_p0,  xz_p1;
+      FitTrack_XZ(goodClusters[0],xz_p0,xz_p1,xz_Pos[0],xz_Pos[1]);
+
+      vector<float>  yz_Pos[2];    // (0,1): (y,z)
+      double yz_p0,  yz_p1;
+      FitTrack_YZ(goodClusters[1],yz_p0,yz_p1,yz_Pos[0],yz_Pos[1]);
+      ++trackID;
+
     }
     
     // DX VS k-side strips
