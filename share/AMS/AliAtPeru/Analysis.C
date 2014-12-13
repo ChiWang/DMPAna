@@ -384,7 +384,6 @@ namespace Performance{ // without any cuts
         h_clsNB[i*2+j] = new TH1F(Form("L%d_S%d--cluster number",i,j),Form("L%d_S%d cluster number",i,j),8,0,8);
         h_clsNB[i*2+j]->SetLabelSize(0.12);
         h_clsNB[i*2+j]->SetLabelSize(0.08,"Y");
-        //h_clsNB[i][j]->GetYaxis()->SetTitleSize(1.5);
         h_COG_SNR[i*2+j] = new TH2F(Form("L%d_S%d--COG VS SNR",i,j),Form("L%d_S%d CoG VS SNR",i,j),1024*2,j*640,640+j*384,200,0,40);
         h_COG_SNR[i*2+j]->SetLabelSize(0.12);
         h_COG_SNR[i*2+j]->SetLabelSize(0.08,"Y");
@@ -486,9 +485,9 @@ namespace Alignment{
 
     TH2F *h_offset_SeedAdd[NLadder][3] = {0};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
     for(short i =0;i<NLadder-1; ++i){
-      h_offset_SeedAdd[i][0] = new TH2F(Form("L%d_S0 Offset_SeedAdd",i+1),  Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
-      h_offset_SeedAdd[i][1] = new TH2F(Form("L%d_S1_0 Offset_SeedAdd",i+1),Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
-      h_offset_SeedAdd[i][2] = new TH2F(Form("L%d_S1_1 Offset_SeedAdd",i+1),Form("L%d_S0 Offset_SeedAdd",i+1),1024,0,1024,1000,-2.5,1.5);
+      h_offset_SeedAdd[i][0] = new TH2F(Form("L%d_S0 Offset_SeedAdd",i+1),  Form("L%d_S0 Offset_SeedAdd",i+1),640,0,640,1000,-2.5,1.5);
+      h_offset_SeedAdd[i][1] = new TH2F(Form("L%d_S1_0 Offset_SeedAdd",i+1),Form("L%d_S1 Offset_SeedAdd",i+1),384,640,1024,1000,-2.5,1.5);
+      h_offset_SeedAdd[i][2] = new TH2F(Form("L%d_S1_1 Offset_SeedAdd",i+1),Form("L%d_S1 Offset_SeedAdd",i+1),384,640,1024,1000,-2.5,1.5);
     }
 
     for(Conf::evtID =0;Conf::evtID<Conf::entries;++Conf::evtID){
@@ -596,8 +595,10 @@ namespace Alignment{
         h_offset_SeedAdd[id][s]->SetYTitle("Offset / cm");
         h_offset_SeedAdd[id][s]->SetLabelSize(0.12);
         h_offset_SeedAdd[id][s]->SetLabelSize(0.08,"Y");
-        h_offset_SeedAdd[id][s]->SetTitleSize(0.04,"X");
+        //h_offset_SeedAdd[id][s]->SetTitleSize(0.04,"Y");
         h_offset_SeedAdd[id][s]->Draw("colz");
+        //h_offset_SeedAdd[id][s]->ProfileX()->Fit(Conf::linearFit,"0Q");//QF
+        //Conf::linearFit->DrawCopy("same");
         //output<<
       }
       c2->cd(id*2+2);
@@ -705,6 +706,7 @@ namespace Tracking{
      Initi();
     // DX VS s-side strips
     TH1F *h_p1[NLadder][2] = {0};  // linear fit parameter 1. 0: s-side, 1: k-side
+    TH1F *h_Dx_XPos[NLadder] = {0};  // 0: Dx VS s-side position.  Dx = hitted pos  - Fitted pos
     
     for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
       LoadEvent();
@@ -732,6 +734,7 @@ namespace Tracking{
       vector<float>  xz_Pos[2];    // (0,1): (x,z)
       double xz_p0,  xz_p1;
       FitTrack_XZ(goodClusters[0],xz_p0,xz_p1,xz_Pos[0],xz_Pos[1]);
+
 
       vector<float>  yz_Pos[2];    // (0,1): (y,z)
       double yz_p0,  yz_p1;
